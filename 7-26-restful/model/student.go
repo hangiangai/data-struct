@@ -16,7 +16,6 @@ type Student struct {
 func (stu Student) GetData(rows *sql.Rows) []interface{} {
 	result := make([]interface{}, 0, 0)
 	for rows.Next() {
-		//
 		err := rows.Scan(&stu.Id, &stu.Name, &stu.Age, &stu.Gender)
 		if err != nil {
 			fmt.Println(err)
