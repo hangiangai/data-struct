@@ -37,7 +37,12 @@ func New() *Restful {
 func (rf *Restful) Init(db *sql.DB, app *iris.Application) {
 	//初始化数据
 	database = db
+	//
 	application = app
+
+	application.AllowMethods(iris.MethodOptions)
+
+	UserRouter(app)
 }
 
 //为指定表注册加restful风格的api接口
@@ -48,6 +53,14 @@ func (rf *Restful) Register(model_ model.Model, tablename_ string) {
 	rf = &Restful{tablename_, model_}
 	//处理OPTIONS预检
 	application.AllowMethods(iris.MethodOptions)
+	//响应not found错误
+	application.OnErrorCode(iris.StatusNotFound, func(ctx iris.Context) {
+		ctx.JSON(map[string]string{
+			"code":    "404",
+			"message": "not found",
+		})
+	})
+
 	//创建路由组
 	routes := application.Party(accessUrl, setRequestMiddleware)
 	//restful风格路由
