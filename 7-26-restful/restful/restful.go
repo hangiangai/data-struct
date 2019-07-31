@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"7-26-restful/middleware"
 	"7-26-restful/model"
 
 	"github.com/kataras/iris"
@@ -40,9 +41,9 @@ func (rf *Restful) Init(db *sql.DB, app *iris.Application) {
 	//
 	application = app
 
-	application.AllowMethods(iris.MethodOptions)
+	// application.AllowMethods(iris.MethodOptions)
 
-	UserRouter(app)
+	// UserRouter(app)
 }
 
 //为指定表注册加restful风格的api接口
@@ -62,7 +63,7 @@ func (rf *Restful) Register(model_ model.Model, tablename_ string) {
 	})
 
 	//创建路由组
-	routes := application.Party(accessUrl, setRequestMiddleware)
+	routes := application.Party(accessUrl, setRequestMiddleware, middleware.CheckToken)
 	//restful风格路由
 	{
 		//获取全部数据
