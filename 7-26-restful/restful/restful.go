@@ -30,20 +30,28 @@ type Response struct {
 
 //返回一个Restful对象
 func New() *Restful {
-
+	fmt.Println("1")
 	return &Restful{}
 }
 
 //用于初始化一些数据
 func (rf *Restful) Init(db *sql.DB, app *iris.Application) {
+	fmt.Println("1")
 	//初始化数据
 	database = db
 	//
 	application = app
+<<<<<<< HEAD
 
 	// application.AllowMethods(iris.MethodOptions)
 
 	// UserRouter(app)
+=======
+	fmt.Println("12")
+	UserRouter(app)
+
+	fmt.Println("123")
+>>>>>>> 98ce2d52778f90c26f1fdbccd5c2c9dd34e352f7
 }
 
 //为指定表注册加restful风格的api接口
