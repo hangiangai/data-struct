@@ -1,8 +1,11 @@
 package components
 
 import (
+	"7-26-restful/middleware"
 	"7-26-restful/model"
 	"database/sql"
+	"log"
+	"strings"
 
 	"github.com/kataras/iris"
 )
@@ -13,6 +16,14 @@ var (
 		"user":    User{},
 		"restful": Restful{},
 	}
+	datamodel = map[string]model.Model{
+		"student": model.Student{},
+		"teacher": model.Teacher{},
+	}
+	middlewares = map[string]iris.Handler{
+		"token":   middleware.CheckToken,
+		"request": middleware.SetRequest,
+	}
 )
 
 //组件接口
@@ -22,16 +33,18 @@ type Component interface {
 
 //组件参数
 type Components struct {
-	//存放所有的数据模型
-	Model map[string]model.Model
+	//数据模型
+	Mod []model.Model
 	//iris对象
 	App *iris.Application
 	//database对象
 	Db *sql.DB
-	//存放所有组件
-	mount map[string]Component
-	//除了组件名参数的其他参数
-	Custom map[string]string
+	//存放组件所需中间件
+	Mid []iris.Handler
+	//数据表名称
+	Tname string
+	//Cus
+	Cus []interface{}
 }
 
 /*
@@ -41,22 +54,45 @@ type Components struct {
 
 func New(db *sql.DB, app *iris.Application) *Components {
 	return &Components{
-		App:   app,
-		Db:    db,
-		mount: component,
+		App: app,
+		Db:  db,
+		Mid: make([]iris.Handler, 0, 0),
+		Mod: make([]model.Model, 0, 0),
+		Cus: make([]interface{}, 0, 0),
 	}
 }
 
 /*
  *使用注册的组件
  *@method Use()
- *@param:cpname string 组件名称
- *@param:custom string 自定义数据
+ *@param:pen_name string 组件名称
+ *@param:custom string 组件所需参数
  */
 
-func (cos *Components) Use(cpname string, custom map[string]string) {
-	cos.Custom = custom
-	if comp, ok := cos.mount[cpname]; ok {
-		comp.Mount(*cos)
+func (cos Components) Use(pen_name string, args map[string]string) {
+	//组件存在
+	if _, ok := component[pen_name]; !ok {
+		log.Fatalf("the %s component does not exist", pen_name)
 	}
+	//处理参数
+	for key, val := range args {
+		switch key {
+		case "mid": //中间件以|分割
+			mid_ := strings.Split(val, "|")
+			for _, val := range mid_ {
+				cos.Mid = append(cos.Mid, middlewares[val])
+			}
+		case "mod": //处理模型
+			mod_ := strings.Split(val, "|")
+			for _, val := range mod_ {
+				cos.Mod = append(cos.Mod, datamodel[val])
+			}
+		case "tname": //数据表名
+			cos.Tname = val
+		default: //用户传的指定数据
+			cos.Cus = append(cos.Cus, val)
+		}
+	}
+	//组件调用
+	component[pen_name].Mount(cos)
 }

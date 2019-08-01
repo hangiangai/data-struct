@@ -2,7 +2,7 @@ package middleware
 
 import "github.com/kataras/iris"
 
-func SetRequestMiddleware(ctx iris.Context) {
+func SetRequest(ctx iris.Context) {
 	//打印日志
 	ctx.Application().Logger().Infof("request info: path:%s method:%s", ctx.Path(), ctx.Method())
 	//设置允许访问域名

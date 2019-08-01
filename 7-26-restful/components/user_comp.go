@@ -33,8 +33,9 @@ type User struct {
 func (u User) Mount(cos Components) {
 	//将值赋给全局对象
 	u.database = cos.Db
+	cos.App.AllowMethods(iris.MethodOptions)
 	//创建路由组
-	router := cos.App.Party("/user/")
+	router := cos.App.Party("/user/", cos.Mid...)
 
 	{
 		//用户登录

@@ -10,7 +10,7 @@ import (
 //token验证中间件
 func CheckToken(ctx iris.Context) {
 	//获取token
-	token := ctx.GetHeader("token")
+	token := ctx.GetHeader("Access-Token")
 	var secret_key string
 	row := util.Database().QueryRow("select secret_key from users where token=?", token)
 	if row.Scan(&secret_key) != nil { //token不存在
