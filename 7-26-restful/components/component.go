@@ -11,18 +11,19 @@ import (
 )
 
 var (
-	//存放组件
-	component = map[string]Component{
-		"user":    User{},
-		"restful": Restful{},
-	}
-	datamodel = map[string]model.Model{
+	//数据模型
+	Dmodel = map[string]model.Model{
 		"student": model.Student{},
-		"teacher": model.Teacher{},
 	}
-	middlewares = map[string]iris.Handler{
+	//中间件
+	Mid = map[string]iris.Handler{
 		"token":   middleware.CheckToken,
 		"request": middleware.SetRequest,
+	}
+	//组件
+	comp = map[string]Component{
+		"restful": Restful{},
+		"user":    User{},
 	}
 )
 
@@ -34,7 +35,7 @@ type Component interface {
 //组件参数
 type Components struct {
 	//数据模型
-	Mod []model.Model
+	Mod map[string]model.Model
 	//iris对象
 	App *iris.Application
 	//database对象
@@ -57,7 +58,7 @@ func New(db *sql.DB, app *iris.Application) *Components {
 		App: app,
 		Db:  db,
 		Mid: make([]iris.Handler, 0, 0),
-		Mod: make([]model.Model, 0, 0),
+		Mod: make(map[string]model.Model),
 		Cus: make([]interface{}, 0, 0),
 	}
 }
@@ -71,7 +72,7 @@ func New(db *sql.DB, app *iris.Application) *Components {
 
 func (cos Components) Use(pen_name string, args map[string]string) {
 	//组件存在
-	if _, ok := component[pen_name]; !ok {
+	if _, ok := comp[pen_name]; !ok {
 		log.Fatalf("the %s component does not exist", pen_name)
 	}
 	//处理参数
@@ -80,12 +81,15 @@ func (cos Components) Use(pen_name string, args map[string]string) {
 		case "mid": //中间件以|分割
 			mid_ := strings.Split(val, "|")
 			for _, val := range mid_ {
-				cos.Mid = append(cos.Mid, middlewares[val])
+				cos.Mid = append(cos.Mid, Mid[val])
 			}
 		case "mod": //处理模型
 			mod_ := strings.Split(val, "|")
-			for _, val := range mod_ {
-				cos.Mod = append(cos.Mod, datamodel[val])
+			for _, name := range mod_ {
+				//判断模型是否存在
+				if m, ok := Dmodel[name]; ok {
+					cos.Mod[name] = m
+				}
 			}
 		case "tname": //数据表名
 			cos.Tname = val
@@ -94,5 +98,5 @@ func (cos Components) Use(pen_name string, args map[string]string) {
 		}
 	}
 	//组件调用
-	component[pen_name].Mount(cos)
+	comp[pen_name].Mount(cos)
 }

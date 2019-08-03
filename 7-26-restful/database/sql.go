@@ -24,6 +24,18 @@ const (
 	DATABASE = "hangiangai"
 )
 
+//SqlSmt
+type SqlUtil struct {
+	smt bytes.Buffer
+	Db  *sql.DB
+}
+
+func New() *SqlUtil {
+	return &SqlUtil{
+		Db: DatabaseConnection(),
+	}
+}
+
 //连接数据库
 func DatabaseConnection() *sql.DB {
 	dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s", USERNAME, PASSWORD, NETWORK, SERVER, PORT, DATABASE)
@@ -40,40 +52,6 @@ func DatabaseConnection() *sql.DB {
 
 func Database() *sql.DB {
 	return database
-}
-
-//生成update sql语句
-//tablename(表名) data(更新数据) objectId(更新对象)
-func CreateUpdateSql(tablename string, data map[string]string, objectId string) string {
-	param := make([]string, 0, len(data))
-	for key, value := range data {
-		param = append(param, key+"="+"'"+value+"'")
-	}
-	sql := "update " + tablename + " set " + strings.Join(param, ",") + " where id = " + objectId
-
-	return sql
-}
-
-//delete sql
-// tablename(表名) objectId(删除对象)
-func CreateDeleteSql(tablename string, objectId string) string {
-	return "delete from " + tablename + " where id=" + objectId
-}
-
-func CreateInsertSql(tablename string, data map[string]string) string {
-	keys := make([]string, 0, len(data))
-	vals := make([]string, 0, len(data))
-	for key, value := range data {
-		keys = append(keys, key)
-		vals = append(vals, "'"+value+"'")
-	}
-	sql := "insert into " + tablename + " (" + strings.Join(keys, ",") + ") values (" + strings.Join(vals, ",") + ")"
-	return sql
-}
-
-//SqlSmt
-type Sql struct {
-	smt bytes.Buffer
 }
 
 //创建插入语句
@@ -148,7 +126,7 @@ func Update(tname string, data map[string]string, oid string) string {
 }
 
 //生成select语句
-func (s *Sql) Select(sel []string) *Sql {
+func (s *SqlUtil) Select(sel []string) *SqlUtil {
 	var sct []string
 	s.smt.WriteString(" select ")
 	for _, val := range sel {
@@ -159,7 +137,7 @@ func (s *Sql) Select(sel []string) *Sql {
 }
 
 //生成where语句
-func (s *Sql) Where(key string, value string) *Sql {
+func (s *SqlUtil) Where(key string, value string) *SqlUtil {
 	s.smt.WriteString(" where ")
 	s.smt.WriteByte('`')
 	s.smt.WriteString(key)
@@ -172,7 +150,7 @@ func (s *Sql) Where(key string, value string) *Sql {
 }
 
 //生成From语句
-func (s *Sql) From(key string) *Sql {
+func (s *SqlUtil) From(key string) *SqlUtil {
 	s.smt.WriteString(" from ")
 	s.smt.WriteByte('`')
 	s.smt.WriteString(key)
@@ -180,7 +158,12 @@ func (s *Sql) From(key string) *Sql {
 	return s
 }
 
+//生成Limit语句
+func (s *SqlUtil) Limit() {
+
+}
+
 //生成最终sql语句
-func (s *Sql) Smt() string {
+func (s *SqlUtil) Smt() string {
 	return s.smt.String()
 }

@@ -16,15 +16,8 @@ func main() {
 
 	pen := components.New(db, app)
 
-	pen.Use("restful", map[string]string{
-		"tname": "student",
-		"mid":   "request|token",
-		"mod":   "student",
-	})
-
 	pen.Use("user", map[string]string{
 		"mid": "request",
 	})
 	app.Run(iris.Addr(":8000"))
-
 }

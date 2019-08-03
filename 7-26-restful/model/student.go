@@ -13,7 +13,7 @@ type Student struct {
 }
 
 //用户重写
-func (stu Student) GetData(rows *sql.Rows) []interface{} {
+func (stu Student) Data(rows *sql.Rows) []interface{} {
 	result := make([]interface{}, 0, 0)
 	for rows.Next() {
 		//

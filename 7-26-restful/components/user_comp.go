@@ -2,8 +2,9 @@ package components
 
 import (
 	util "7-26-restful/utils"
+	"crypto/md5"
 	"database/sql"
-	"encoding/base64"
+	"time"
 
 	"github.com/kataras/iris"
 )
@@ -11,7 +12,7 @@ import (
 var (
 	sql_statement = []string{
 		"select username from users where username=?",
-		"insert into users (username,password,objectId,secret_key) values (?,?,?,?)",
+		"insert into users (username,password,oid,secret_key,created_at) values (?,?,?,?,?)",
 		"select objectId,username,password from users where username = ?",
 		"update users set secret_key=?,token=? where username=?",
 	}
@@ -31,28 +32,20 @@ type User struct {
 
 //组件
 func (u User) Mount(cos Components) {
-	//将值赋给全局对象
-	u.database = cos.Db
+	u.database = cos.Db //将值赋给全局对象
 	cos.App.AllowMethods(iris.MethodOptions)
-	//创建路由组
-	router := cos.App.Party("/user/", cos.Mid...)
-
-	{
-		//用户登录
-		router.Post("/login", u.Login)
-		//用户注册
-		router.Post("/regiser", u.Register)
-	}
+	router := cos.App.Party("/user/", cos.Mid...) //创建路由组
+	router.Post("/login", u.Login)                //用户登录
+	router.Post("/register", u.Register)          //用户注册
 }
 
 //注册
 func (u User) Register(ctx iris.Context) {
 
-	register_data := make(map[string]string)
-	ctx.ReadJSON(&register_data)
-	var username string
+	reg_data := make(map[string]string)
+	ctx.ReadJSON(&reg_data)
 	//1.用户提交数据错误
-	if _, ok := CheckInfo(register_data, []string{"username", "password"}); !ok {
+	if _, ok := Filter(reg_data, []string{"username", "password"}); !ok {
 		ctx.JSON(Response{
 			Code:    404,
 			Message: "the request failed",
@@ -61,22 +54,23 @@ func (u User) Register(ctx iris.Context) {
 		return
 	}
 
-	row := u.database.QueryRow(sql_statement[0], register_data["username"])
+	var username string
+	row := u.database.QueryRow(sql_statement[0], reg_data["username"])
 	//2.用户已存在
-	//QueryRow()方法查询到返回数据,查询不到返回err
-	//当查询到数据error为nil
 	if row.Scan(&username) == nil {
 		ctx.JSON(Response{
 			Code:    404,
 			Message: "the user already exists",
-			Data:    register_data["username"],
+			Data:    reg_data["username"],
 		})
 		return
 	}
-
-	random := base64.StdEncoding.EncodeToString([]byte(register_data["username"]))
+	//对象对应的id
+	oid := md5.Sum([]byte(reg_data["username"]))
+	//用户对token对应的key
+	secret_key := oid[3:15]
 	//插入数据 插入用户名,密码,用户id号,初始秘钥
-	result, err := u.database.Exec(sql_statement[1], register_data["username"], register_data["password"], random[0:6], random[10:22])
+	result, err := u.database.Exec(sql_statement[1], reg_data["username"], reg_data["password"], oid, secret_key, time.Now())
 	util.ErrProcess(err, 58)
 	rowsAffected, err := result.RowsAffected()
 	util.ErrProcess(err, 80)
@@ -86,16 +80,15 @@ func (u User) Register(ctx iris.Context) {
 		ctx.JSON(Response{
 			Code:    404,
 			Message: "registration failed",
-			Data:    register_data["username"],
+			Data:    reg_data["username"],
 		})
 		return
 	}
-
 	//4.注册成功
 	ctx.JSON(Response{
 		Code:    200,
 		Message: "registered successfully",
-		Data:    random[0:6],
+		Data:    oid,
 	})
 }
 
@@ -108,7 +101,7 @@ func (u User) Login(ctx iris.Context) {
 	var password string
 	var objectId string
 	//1.数据错误
-	if _, ok := CheckInfo(login_data, []string{"username", "password"}); !ok {
+	if _, ok := Filter(login_data, []string{"username", "password"}); !ok {
 		ctx.JSON(Response{
 			Code:    404,
 			Message: "the user already exists",
@@ -159,9 +152,8 @@ func (u User) Login(ctx iris.Context) {
 	}
 }
 
-//检测所给数据中是否包含指定字段数据
-func CheckInfo(v map[string]string, key []string) (string, bool) {
-	if len(key) > 0 {
+func Filter(v map[string]string, key []string) (string, bool) {
+	if len(key) > 0 && v != nil {
 		for _, val := range key {
 			if val_, ok := v[val]; !ok || len(val_) == 0 {
 				return val + " empty", false
